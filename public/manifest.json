@@ -1,0 +1,28 @@
+{
+  "name": "Distill",
+  "version": "0.1.0",
+  "description": "将 AI 对话蒸馏为结构化知识点的浏览器插件",
+  "manifest_version": 3,
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://gemini.google.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["src/content/gemini.ts"]
+    }
+  ],
+  "background": {
+    "service_worker": "src/background/index.ts"
+  },
+  "action": {
+    "default_popup": "src/popup/index.html"
+  },
+  "options_page": "src/options/index.html"
+}

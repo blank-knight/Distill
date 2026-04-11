@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm build:*)",
+      "Bash(pnpm add:*)",
+      "Bash(git -C /home/zwt/clawd/Distill rev-parse --show-toplevel)",
+      "Bash(git -C /home/zwt/clawd/Distill remote -v)",
+      "Bash(git init:*)",
+      "Bash(git remote:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

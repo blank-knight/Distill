@@ -1,0 +1,69 @@
+{
+  "nodes": [
+    {
+      "id": "user",
+      "type": "text",
+      "text": "👤 User\n在 Gemini 对话",
+      "x": -400, "y": 0, "width": 150, "height": 80
+    },
+    {
+      "id": "content_script",
+      "type": "text",
+      "text": "📄 Content Script\nsrc/content/gemini.ts\n\n解析 Gemini DOM\n提取对话文本",
+      "x": -150, "y": -100, "width": 200, "height": 120
+    },
+    {
+      "id": "background",
+      "type": "text",
+      "text": "⚙️ Background Worker\nsrc/background/index.ts\n\n消息路由\nChrome Storage 管理",
+      "x": 100, "y": -100, "width": 220, "height": 120
+    },
+    {
+      "id": "extractor",
+      "type": "text",
+      "text": "🧠 Extractor\nsrc/background/extractor.ts\n\n调用 Claude API\n解析知识点 JSON",
+      "x": 100, "y": 100, "width": 220, "height": 120
+    },
+    {
+      "id": "claude_api",
+      "type": "text",
+      "text": "🤖 Claude API\nclaude-haiku-4-5\n\n智能知识提取",
+      "x": 400, "y": 100, "width": 180, "height": 100
+    },
+    {
+      "id": "popup",
+      "type": "text",
+      "text": "🪟 Popup UI\nsrc/popup/\n\nKnowledgeList\nKnowledgeCard\nExportPanel",
+      "x": 100, "y": -300, "width": 220, "height": 120
+    },
+    {
+      "id": "anki_export",
+      "type": "text",
+      "text": "🃏 Anki Export\nsrc/export/anki.ts\n\n生成 .txt 文件\nTab 分隔格式",
+      "x": -150, "y": -300, "width": 200, "height": 100
+    },
+    {
+      "id": "obsidian_export",
+      "type": "text",
+      "text": "📝 Obsidian Export\nsrc/export/obsidian.ts\n\n生成 .md 文件\nJSZip 打包",
+      "x": 400, "y": -300, "width": 200, "height": 100
+    },
+    {
+      "id": "storage",
+      "type": "text",
+      "text": "💾 Chrome Storage\n\nsync: 用户配置\nlocal: 知识点缓存",
+      "x": 400, "y": -100, "width": 200, "height": 100
+    }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "user", "toNode": "content_script", "label": "打开 Gemini 对话" },
+    { "id": "e2", "fromNode": "content_script", "toNode": "background", "label": "发送对话文本" },
+    { "id": "e3", "fromNode": "background", "toNode": "extractor", "label": "触发提取" },
+    { "id": "e4", "fromNode": "extractor", "toNode": "claude_api", "label": "API 请求" },
+    { "id": "e5", "fromNode": "claude_api", "toNode": "extractor", "label": "知识点 JSON" },
+    { "id": "e6", "fromNode": "extractor", "toNode": "storage", "label": "存储结果" },
+    { "id": "e7", "fromNode": "background", "toNode": "popup", "label": "返回知识点" },
+    { "id": "e8", "fromNode": "popup", "toNode": "anki_export", "label": "导出 Anki" },
+    { "id": "e9", "fromNode": "popup", "toNode": "obsidian_export", "label": "导出 Obsidian" }
+  ]
+}
