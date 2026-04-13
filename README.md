@@ -6,30 +6,52 @@ Distill 是一个 Chrome 浏览器扩展，能够自动提取你与 AI 的对话
 
 ## 功能特性
 
-- **一键提取**：在 Gemini 对话页面点击按钮，自动抓取完整对话内容
-- **AI 结构化**：调用 Claude 或 GLM 模型，将对话归纳为「问题 / 答案 / 延伸 / 标签」四维知识点
-- **卡片管理**：在 Popup 中查看、编辑、删除提取到的知识卡片
+- **多平台提取**：支持 ChatGPT、Gemini、Claude、DeepSeek、Kimi、豆包、通义千问、文心一言、星火等 9 大 AI 平台
+- **多模型驱动**：可选 GLM、DeepSeek、通义千问、Moonshot、OpenAI、豆包、Claude 共 7 种 LLM 作为提取后端
+- **AI 结构化**：将对话归纳为「问题 / 答案 / 延伸 / 标签」四维知识点
+- **快捷键提取**：`Ctrl+Shift+E`（Mac: `⌘+Shift+E`）一键后台提取，无需打开 Popup
+- **卡片管理**：查看、编辑、删除提取到的知识卡片
+- **后台提取**：提取过程在后台运行，可关闭 Popup，完成后自动通知；重新打开 Popup 仍显示提取进度
 - **多平台导出**：
   - **Anki**：导出 `.txt` 文件，直接 Import 生成闪卡
   - **Obsidian**：导出 `.zip`，每个知识点对应一个带 YAML frontmatter 的 Markdown 文件
   - **Notion**：导出 `.csv`，直接导入 Notion Database
 
+## 支持平台
+
+| AI 对话平台 | 域名 |
+|------------|------|
+| ChatGPT | chatgpt.com |
+| Gemini | gemini.google.com |
+| Claude | claude.ai |
+| DeepSeek | chat.deepseek.com |
+| Kimi | kimi.moonshot.cn |
+| 豆包 | doubao.com |
+| 通义千问 | tongyi.aliyun.com |
+| 文心一言 | yiyan.baidu.com |
+| 星火 | xinghuo.xfyun.cn |
+
 ## 界面预览
 
 ```
-┌─────────────────────────────────┐
-│ Distill  3           [提取知识点] │  ← 当前已提取 3 个知识点
-├─────────────────────────────────┤
-│ ┌─────────────────────────────┐ │
-│ │ 期现套利为何会亏损？         │ │  ← 问题（加粗）
-│ │ 当市场情绪看跌时，资金费率   │ │  ← 答案（最多3行）
-│ │ 转负，空头需向多头支付...    │ │
-│ │ [期货] [套利] [资金费率]    │ │  ← 标签
-│ └─────────────────────────────┘ │
-│ ...                             │
-├─────────────────────────────────┤
-│ [Anki]  [Obsidian]  [Notion]  ⚙ │  ← 导出 + 设置
-└─────────────────────────────────┘
+┌──────────────────────────────────┐
+│ 💧 Distill  [3]      [提取知识点] │  ← 渐变头部 + 知识点计数
+├──────────────────────────────────┤
+│ ▸ 期现套利为何会亏损？            │
+│   [期货] [套利] [资金费率]        │  ← 可展开的知识卡片
+│                                  │
+│ ▾ RAG 和 Fine-tuning 有什么区别？ │
+│   ┌ 答案 ─────────────────────┐  │
+│   │ RAG 通过检索外部知识库增强  │  │
+│   │ 生成，Fine-tuning 则...    │  │
+│   ├ 延伸 ─────────────────────┤  │
+│   │ 推荐阅读：LangChain 文档   │  │
+│   └───────────────────────────┘  │
+│   [AI] [RAG] [NLP] [知识库]      │
+├──────────────────────────────────┤
+│  [Anki]  [Obsidian]  [Notion]    │  ← 导出
+│                           设置   │
+└──────────────────────────────────┘
 ```
 
 ## 安装与构建
@@ -64,15 +86,26 @@ pnpm build
 
 ## 配置
 
-点击插件 Popup 底部的 **⚙ 设置**，进入设置页面：
+点击插件 Popup 底部的**设置**，进入设置页面：
+
+### 模型选择
+
+| 模型 | 默认模型 ID | 获取 API Key |
+|------|------------|-------------|
+| GLM（智谱 AI） | glm-4-flash | [open.bigmodel.cn](https://open.bigmodel.cn) |
+| DeepSeek | deepseek-chat | [platform.deepseek.com](https://platform.deepseek.com) |
+| 通义千问（Qwen） | qwen-turbo | [dashscope.console.aliyun.com](https://dashscope.console.aliyun.com) |
+| 月之暗面（Moonshot） | moonshot-v1-8k | [platform.moonshot.cn](https://platform.moonshot.cn) |
+| OpenAI（GPT） | gpt-4o-mini | [platform.openai.com](https://platform.openai.com/api-keys) |
+| 豆包（Doubao） | 用户指定 Endpoint ID | [console.volcengine.com/ark](https://console.volcengine.com/ark) |
+| Claude（Anthropic） | claude-haiku-4-5 | [console.anthropic.com](https://console.anthropic.com) |
+
+### 其他设置
 
 | 配置项 | 说明 |
 |--------|------|
-| 模型选择 | Claude（Anthropic）或 GLM（智谱 AI） |
-| Claude API Key | 从 [console.anthropic.com](https://console.anthropic.com) 获取 |
-| GLM API Key | 从 [open.bigmodel.cn](https://open.bigmodel.cn) 获取 |
-| 默认语言 | 知识点语言：跟随对话 / 中文 / 英文 |
-| 默认导出格式 | Anki / Obsidian |
+| 默认语言 | 知识点语言：跟随对话 / 中文 / English |
+| 默认导出格式 | Anki / Obsidian / Notion |
 
 配置完成后点击**测试 API Key** 验证可用性，再**保存设置**。
 
@@ -80,16 +113,23 @@ pnpm build
 
 ### 提取知识点
 
-1. 打开 [Gemini](https://gemini.google.com) 进行一段对话
+**方式一：Popup 按钮**
+
+1. 打开任意支持的 AI 对话页面，进行一段对话
 2. 点击 Chrome 工具栏中的 **Distill** 图标
 3. 点击 **提取知识点** 按钮
-4. 等待 AI 处理完成，知识卡片出现在 Popup 中
+4. 等待 AI 处理完成（可关闭 Popup，后台继续运行）
+
+**方式二：快捷键**
+
+在任意支持的 AI 对话页面按 `Ctrl+Shift+E`（Mac: `⌘+Shift+E`），后台自动提取，完成后弹出系统通知。
 
 ### 管理知识卡片
 
-- **展开**：点击卡片查看完整答案和延伸内容
-- **编辑**：悬停卡片，点击 ✎ 图标修改任意字段
-- **删除**：悬停卡片，点击 ✕ 图标
+- **展开 / 收起**：点击卡片查看完整答案和延伸内容
+- **编辑**：悬停卡片右侧，点击铅笔图标修改任意字段
+- **删除**：悬停卡片右侧，点击垃圾桶图标
+- **清空**：点击头部「清空」按钮删除全部知识点
 
 ### 导出
 
@@ -119,20 +159,21 @@ pnpm build
 | 层次 | 技术 |
 |------|------|
 | 框架 | React 19 + TypeScript |
-| 构建 | Vite 8 + crxjs |
+| 构建 | Vite 8 + @crxjs/vite-plugin |
 | 样式 | Tailwind CSS v4 |
-| AI | Anthropic SDK（Claude Haiku）/ ZhipuAI（GLM-4-Flash） |
-| 导出 | JSZip（Obsidian）|
+| AI | Anthropic SDK / OpenAI-compatible API（适配 7 种模型） |
+| 导出 | JSZip（Obsidian） |
+| 扩展 | Chrome Extension Manifest V3 |
 
 ## 项目结构
 
 ```
 src/
 ├── background/       # Service Worker
-│   ├── index.ts      # 消息路由与存储
-│   └── extractor.ts  # AI 知识提取核心
+│   ├── index.ts      # 消息路由、提取编排、状态管理
+│   └── extractor.ts  # AI 知识提取（多模型适配）
 ├── content/
-│   └── gemini.ts     # Gemini 页面对话抓取
+│   └── content.ts    # 多平台对话抓取（9 个平台）
 ├── popup/            # 插件 Popup 界面
 │   ├── main.tsx
 │   └── components/
@@ -147,5 +188,5 @@ src/
 
 ## 当前限制
 
-- 仅支持 **Gemini**（`gemini.google.com`）页面的对话提取，Claude.ai / ChatGPT 等平台待后续支持
 - Notion 导出为离线 CSV，暂不支持通过 Notion API 直接推送
+- 部分平台在页面结构更新后可能需要适配选择器
