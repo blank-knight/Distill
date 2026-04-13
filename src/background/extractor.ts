@@ -1,7 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
-
-declare const chrome: any;
-import type { ConversationMessage, KnowledgePoint, LanguageOption, ModelType } from '../types';
+import type { ConversationMessage, KnowledgePoint, LanguageOption, UserSettings } from '../types';
+import { MODEL_META } from '../types';
 
 const SYSTEM_PROMPT = `你是一个专业的知识提取助手，任务是从对话中提取结构化的知识点。
 
@@ -26,7 +24,7 @@ const SYSTEM_PROMPT = `你是一个专业的知识提取助手，任务是从对
       "tags": ["AI", "RAG", "NLP", "知识库"]
     }
   ]
-}`; 
+}`;
 
 export interface ExtractorResult {
   success: boolean;
@@ -34,137 +32,136 @@ export interface ExtractorResult {
   error?: string;
 }
 
+/** 获取当前模型对应的 API Key */
+export function getApiKey(settings: UserSettings): string {
+  switch (settings.model) {
+    case 'claude':   return settings.claudeApiKey;
+    case 'openai':   return settings.openaiApiKey;
+    case 'deepseek': return settings.deepseekApiKey;
+    case 'qwen':     return settings.qwenApiKey;
+    case 'moonshot': return settings.moonshotApiKey;
+    case 'doubao':   return settings.doubaoApiKey;
+    case 'glm':      return settings.glmApiKey;
+    default:         return '';
+  }
+}
+
+/** 通用 OpenAI-compatible API 调用（适用于 OpenAI/DeepSeek/Qwen/Moonshot/Doubao/GLM） */
+async function callOpenAICompatible(
+  baseUrl: string,
+  model: string,
+  apiKey: string,
+  messages: { role: string; content: string }[]
+): Promise<string> {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: 4096,
+      temperature: 0.7,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || data.error) {
+    const msg = data.error?.message || `HTTP ${response.status}`;
+    throw new Error(msg);
+  }
+
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('API 返回内容为空');
+  return content;
+}
+
 export async function extractKnowledge(
   conversation: ConversationMessage[],
-  apiKey: string,
+  settings: UserSettings,
   sourceUrl: string,
-  model: ModelType = 'claude',
   _language: LanguageOption = 'auto'
 ): Promise<ExtractorResult> {
+  const apiKey = getApiKey(settings);
+
+  if (!apiKey) {
+    return { success: false, error: `请在设置页面配置 ${MODEL_META[settings.model].label} API Key` };
+  }
+
+  const conversationText = conversation
+    .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+    .join('\n\n');
+
   try {
-    // 验证 API Key
-    if (!apiKey) {
-      return {
-        success: false,
-        error: '请配置 Claude API Key'
-      };
-    }
-
-    // 构建对话文本
-    const conversationText = conversation
-      .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
-      .join('\n\n');
-
     let responseText = '';
+    const { model } = settings;
+    const meta = MODEL_META[model];
 
     if (model === 'claude') {
-      // 初始化 Anthropic 客户端
-      const anthropic = new Anthropic({
-        apiKey,
-        dangerouslyAllowBrowser: true
-      });
-
-      // 调用 Claude API
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      const anthropic = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
       const response = await anthropic.messages.create({
-        model: "claude-haiku-4-5-20251001",
+        model: meta.defaultModel,
         max_tokens: 4096,
-        system: [
-          {
-            type: "text",
-            text: SYSTEM_PROMPT,
-            cache_control: { type: "ephemeral" }
-          }
-        ],
-        messages: [{ role: "user", content: conversationText }]
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: conversationText }],
       });
-
-      // 解析响应
       responseText = (response.content[0] as any)?.text || '';
-    } else if (model === 'glm') {
-      const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "glm-4-flash",
-          messages: [
-            {
-              role: "system",
-              content: SYSTEM_PROMPT
-            },
-            {
-              role: "user",
-              content: conversationText
-            }
-          ],
-          max_tokens: 4096,
-          temperature: 0.7
-        })
-      });
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error.message || 'GLM API 调用失败');
+    } else {
+      // 所有其他模型使用 OpenAI-compatible 接口
+      const modelId = model === 'doubao' ? settings.doubaoModel : meta.defaultModel;
+      if (model === 'doubao' && !modelId) {
+        return { success: false, error: '请在设置页面配置豆包 Model ID（Endpoint ID）' };
       }
-      const content = data.choices?.[0]?.message?.content;
-      const reasoningContent = data.choices?.[0]?.message?.reasoning_content;
-      responseText = content || reasoningContent || '';
+      responseText = await callOpenAICompatible(
+        meta.baseUrl,
+        modelId,
+        apiKey,
+        [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: conversationText },
+        ]
+      );
     }
-    
-    // 提取 JSON 部分
+
     if (!responseText) {
-      return {
-        success: false,
-        error: 'API 返回内容为空，请检查模型配置或稍后重试'
-      };
+      return { success: false, error: 'API 返回内容为空，请检查模型配置或稍后重试' };
     }
+
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return {
-        success: false,
-        error: 'API 返回格式错误，无法解析知识点'
-      };
+      return { success: false, error: 'API 返回格式错误，无法解析知识点' };
     }
 
-    const parsedResponse = JSON.parse(jsonMatch[0]);
-    const knowledgePoints = parsedResponse.knowledge_points || [];
-
-    // 为每个知识点添加 id 和 created_at
+    const parsed = JSON.parse(jsonMatch[0]);
     const now = new Date().toISOString();
-    const processedPoints: KnowledgePoint[] = knowledgePoints.map((point: any) => ({
+    const processedPoints: KnowledgePoint[] = (parsed.knowledge_points || []).map((p: any) => ({
       id: crypto.randomUUID(),
-      question: point.question || '',
-      answer: point.answer || '',
-      extension: point.extension || '',
-      tags: point.tags || [],
+      question: p.question || '',
+      answer: p.answer || '',
+      extension: p.extension || '',
+      tags: p.tags || [],
       source_url: sourceUrl,
-      created_at: now
+      created_at: now,
     }));
 
-    return {
-      success: true,
-      data: processedPoints
-    };
+    return { success: true, data: processedPoints };
 
   } catch (error) {
     console.error('提取知识点失败:', error);
-    
-    let errorMessage = '提取知识点时发生错误';
+    let msg = '提取知识点时发生错误';
     if (error instanceof Error) {
-      if (error.message.includes('401')) {
-        errorMessage = 'Claude API Key 无效或已过期';
+      if (error.message.includes('401') || error.message.toLowerCase().includes('unauthorized')) {
+        msg = `${MODEL_META[settings.model].label} API Key 无效或已过期`;
       } else if (error.message.includes('429')) {
-        errorMessage = 'API 请求频率过高，请稍后再试';
+        msg = 'API 请求频率过高，请稍后再试';
       } else {
-        errorMessage = error.message;
+        msg = error.message;
       }
     }
-
-    return {
-      success: false,
-      error: errorMessage
-    };
+    return { success: false, error: msg };
   }
 }

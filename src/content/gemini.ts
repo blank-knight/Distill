@@ -2,71 +2,59 @@ import type { ConversationMessage } from '../types';
 
 declare const chrome: any;
 
-type Turn = { el: Element; role: 'user' | 'model' };
+const GEMINI_SELECTORS = {
+  userMessage: [
+    'user-query .query-text',
+    '[data-message-author-role="user"]',
+    '.user-message'
+  ],
+  modelResponse: [
+    'model-response .response-content',
+    '[data-message-author-role="model"]',
+    '.model-response'
+  ]
+};
 
-function getTextContent(el: Element, selectors: string[]): string {
-  for (const sel of selectors) {
-    const found = el.querySelector(sel);
-    const text = found?.textContent?.trim();
-    if (text) return text;
+function getElementText(selectors: string[]): string | null {
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      return element.textContent?.trim() || null;
+    }
   }
-  return el.textContent?.trim() || '';
+  return null;
 }
 
 export function extractConversation(): ConversationMessage[] {
   const messages: ConversationMessage[] = [];
-
-  // Strategy 1: Gemini custom elements (user-query / model-response)
-  const userEls = Array.from(document.querySelectorAll('user-query'));
-  const modelEls = Array.from(document.querySelectorAll('model-response'));
-
-  if (userEls.length > 0 || modelEls.length > 0) {
-    const turns: Turn[] = [
-      ...userEls.map(el => ({ el, role: 'user' as const })),
-      ...modelEls.map(el => ({ el, role: 'model' as const })),
-    ].sort((a, b) => {
-      const pos = a.el.compareDocumentPosition(b.el);
-      return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
-    });
-
-    for (const { el, role } of turns) {
-      let content = '';
-      if (role === 'user') {
-        content = getTextContent(el, ['.query-text', 'p', '.query-content']);
-      } else {
-        content = getTextContent(el, ['.markdown', '.response-content', '.response-container', 'p']);
-      }
-      if (content) messages.push({ role, content });
+  
+  // 尝试获取所有消息容器
+  const messageContainers = document.querySelectorAll('[data-message-id]') || 
+                           document.querySelectorAll('.message-container') || 
+                           document.querySelectorAll('.chat-message');
+  
+  messageContainers.forEach((_container) => {
+    // 尝试判断消息类型
+    let role: 'user' | 'model' = 'model';
+    let content: string | null = null;
+    
+    // 检查是否为用户消息
+    const userSelectors = GEMINI_SELECTORS.userMessage.map(sel => `:scope ${sel}`);
+    content = getElementText(userSelectors);
+    if (content) {
+      role = 'user';
+    } else {
+      // 检查是否为 AI 回复
+      const modelSelectors = GEMINI_SELECTORS.modelResponse.map(sel => `:scope ${sel}`);
+      content = getElementText(modelSelectors);
     }
-
-    if (messages.length > 0) {
-      console.log('Distill: 提取到', messages.length, '条消息（custom elements）');
-      return messages;
+    
+    if (content) {
+      messages.push({ role, content });
     }
-  }
-
-  // Strategy 2: data-message-author-role attributes
-  const byRole = Array.from(document.querySelectorAll('[data-message-author-role]'));
-  for (const el of byRole) {
-    const roleAttr = el.getAttribute('data-message-author-role');
-    if (roleAttr !== 'user' && roleAttr !== 'model') continue;
-    const content = el.textContent?.trim();
-    if (content) messages.push({ role: roleAttr, content });
-  }
-
-  if (messages.length > 0) {
-    console.log('Distill: 提取到', messages.length, '条消息（data-role）');
-    return messages;
-  }
-
-  // Strategy 3: common chat selectors
-  const chatMessages = Array.from(document.querySelectorAll('.message-container, .chat-message, [data-message-id]'));
-  for (const el of chatMessages) {
-    const content = el.textContent?.trim();
-    if (content) messages.push({ role: 'model', content });
-  }
-
-  console.log('Distill: 提取到', messages.length, '条消息（fallback）');
+  });
+  
+  console.log('Distill: 抓取到的对话消息数量:', messages.length);
   return messages;
 }
 

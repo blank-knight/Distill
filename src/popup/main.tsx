@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import '../index.css';
 import type { KnowledgePoint } from '../types';
@@ -7,77 +7,189 @@ import { ExportPanel } from './components/ExportPanel';
 
 declare const chrome: any;
 
+const STORAGE_KEY = 'knowledge_points';
+
+const DropIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 128 128" fill="none">
+    <path d="M64 24C53 39 38 58 38 78C38 92.36 49.64 104 64 104C78.36 104 90 92.36 90 78C90 58 75 39 64 24Z" fill="currentColor" />
+  </svg>
+);
+
 const App: React.FC = () => {
   const [knowledgePoints, setKnowledgePoints] = useState<KnowledgePoint[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const extractingRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadKnowledgePoints = async () => {
-    try {
-      const response = await (chrome as any).runtime.sendMessage({ action: 'GET_KNOWLEDGE_POINTS' });
-      if (response.success) setKnowledgePoints(response.data || []);
-    } catch {}
-  };
-
-  const extractKnowledge = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await (chrome as any).runtime.sendMessage({ action: 'EXTRACT_KNOWLEDGE' });
-      if (response.success) {
-        setKnowledgePoints(response.data || []);
-      } else {
-        setError(response.error || '提取失败');
+  useEffect(() => {
+    chrome.storage.local.get([STORAGE_KEY, 'distill_extracting'], (result: any) => {
+      setKnowledgePoints(result[STORAGE_KEY] || []);
+      // 恢复提取状态（防止关闭再打开后丢失）
+      const startTime = result.distill_extracting;
+      if (startTime && typeof startTime === 'number') {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 120000) {
+          setExtracting(true);
+          extractingRef.current = true;
+          timeoutRef.current = setTimeout(() => {
+            if (extractingRef.current) {
+              extractingRef.current = false;
+              setExtracting(false);
+              setError('提取超时，请检查网络和 API Key 后重试');
+              chrome.storage.local.set({ distill_extracting: 0 });
+            }
+          }, 120000 - elapsed);
+        } else {
+          // 超过 2 分钟的旧状态，清除
+          chrome.storage.local.set({ distill_extracting: 0 });
+        }
       }
-    } catch {
-      setError('提取时发生错误');
-    } finally {
       setIsLoading(false);
-    }
+    });
+  }, []);
+
+  useEffect(() => {
+    const listener = (changes: any, area: string) => {
+      if (area !== 'local') return;
+      if (STORAGE_KEY in changes) {
+        setKnowledgePoints(changes[STORAGE_KEY].newValue || []);
+      }
+      if ('distill_extract_done' in changes && extractingRef.current) {
+        extractingRef.current = false;
+        setExtracting(false);
+        if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+        chrome.storage.local.set({ distill_extracting: 0 });
+        const done = changes.distill_extract_done.newValue;
+        if (done?.success) {
+          setSuccessMsg(`提取完成，新增 ${done.count} 个知识点`);
+          setTimeout(() => setSuccessMsg(null), 3000);
+        } else if (done && !done.success) {
+          setError(done.error || '提取失败');
+        }
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, []);
+
+  const extractKnowledge = () => {
+    if (extractingRef.current) return; // 防止重复提取
+    setError(null);
+    setSuccessMsg(null);
+    setExtracting(true);
+    extractingRef.current = true;
+    chrome.storage.local.set({ distill_extracting: Date.now() });
+
+    timeoutRef.current = setTimeout(() => {
+      if (extractingRef.current) {
+        extractingRef.current = false;
+        setExtracting(false);
+        setError('提取超时，请检查网络和 API Key 后重试');
+        chrome.storage.local.set({ distill_extracting: 0 });
+      }
+    }, 120000);
+
+    chrome.runtime.sendMessage({ action: 'EXTRACT_KNOWLEDGE' }, (res: any) => {
+      if (chrome.runtime.lastError || !res) {
+        extractingRef.current = false;
+        setExtracting(false);
+        if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+        chrome.storage.local.set({ distill_extracting: 0 });
+        setError('无法连接后台服务，请重新加载插件');
+        return;
+      }
+      if (!res.success) {
+        extractingRef.current = false;
+        setExtracting(false);
+        if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+        chrome.storage.local.set({ distill_extracting: 0 });
+        setError(res.error || '提取失败');
+        return;
+      }
+    });
   };
 
-  const handleUpdate = async (updatedPoint: KnowledgePoint) => {
-    const updated = knowledgePoints.map(p => p.id === updatedPoint.id ? updatedPoint : p);
-    setKnowledgePoints(updated);
-    await (chrome as any).runtime.sendMessage({ action: 'SAVE_KNOWLEDGE_POINTS', points: updated });
+  const clearAll = () => {
+    if (!confirm(`确定要删除全部 ${knowledgePoints.length} 个知识点吗？`)) return;
+    setKnowledgePoints([]);
+    chrome.storage.local.remove(STORAGE_KEY);
   };
 
-  const handleDelete = async (id: string) => {
-    const updated = knowledgePoints.filter(p => p.id !== id);
-    setKnowledgePoints(updated);
-    await (chrome as any).runtime.sendMessage({ action: 'SAVE_KNOWLEDGE_POINTS', points: updated });
+  const handleUpdate = (updated: KnowledgePoint) => {
+    const next = knowledgePoints.map(p => p.id === updated.id ? updated : p);
+    setKnowledgePoints(next);
+    chrome.storage.local.set({ [STORAGE_KEY]: next });
   };
 
-  useEffect(() => { loadKnowledgePoints(); }, []);
+  const handleDelete = (id: string) => {
+    const next = knowledgePoints.filter(p => p.id !== id);
+    setKnowledgePoints(next);
+    chrome.storage.local.set({ [STORAGE_KEY]: next });
+  };
 
   return (
     <div className="flex flex-col bg-slate-50" style={{ width: 400, height: 560 }}>
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-base font-bold text-slate-800">Distill</span>
-          {knowledgePoints.length > 0 && (
-            <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-              {knowledgePoints.length}
-            </span>
-          )}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-3 shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+              <DropIcon className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-base font-bold text-white tracking-tight">Distill</span>
+            {knowledgePoints.length > 0 && (
+              <span className="text-[11px] font-bold bg-white/25 text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                {knowledgePoints.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {knowledgePoints.length > 0 && (
+              <button
+                onClick={clearAll}
+                className="px-2 py-1 text-[11px] font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                title="清空所有知识点"
+              >
+                清空
+              </button>
+            )}
+            <button
+              onClick={extractKnowledge}
+              disabled={extracting}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 hover:bg-indigo-50 disabled:opacity-60 shadow-sm transition-all"
+            >
+              {extracting ? (
+                <>
+                  <span className="inline-block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  提取中…
+                </>
+              ) : '提取知识点'}
+            </button>
+          </div>
         </div>
-        <button
-          onClick={extractKnowledge}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          {isLoading ? (
-            <>
-              <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              提取中…
-            </>
-          ) : '提取知识点'}
-        </button>
       </div>
 
-      {/* ── Error ── */}
+      {/* ── Banners ── */}
+      {extracting && (
+        <div className="mx-3 mt-2 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs rounded-lg shrink-0 flex items-center gap-2">
+          <span className="inline-block w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0" />
+          正在后台提取，完成后会自动显示，可关闭此窗口
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="mx-3 mt-2 px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-lg shrink-0 flex items-center gap-2">
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+          </svg>
+          {successMsg}
+        </div>
+      )}
+
       {error && (
         <div className="mx-3 mt-2 px-3 py-2 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg leading-relaxed shrink-0">
           {error}
@@ -88,13 +200,22 @@ const App: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
-            <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : knowledgePoints.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
-            <span className="text-4xl">📚</span>
-            <p className="text-sm font-medium text-slate-500">暂无知识点</p>
-            <p className="text-xs text-slate-400">在 Gemini 对话页面点击「提取知识点」</p>
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-200/50">
+              <DropIcon className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-600">暂无知识点</p>
+              <p className="text-xs text-slate-400 mt-1">从 AI 对话中提取结构化知识</p>
+            </div>
+            <div className="text-[10px] text-slate-400 space-y-0.5">
+              <p>ChatGPT / Gemini / Claude / DeepSeek</p>
+              <p>Kimi / 豆包 / 通义千问 / 文心一言 / 星火</p>
+            </div>
+            <p className="text-[10px] text-indigo-400 font-medium">快捷键 Ctrl+Shift+E</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -106,14 +227,14 @@ const App: React.FC = () => {
       </div>
 
       {/* ── Footer ── */}
-      <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-2.5">
+      <div className="shrink-0 bg-white border-t border-slate-200 px-3 pt-2.5 pb-2.5">
         <ExportPanel points={knowledgePoints} />
-        <div className="flex justify-end mt-2">
+        <div className="flex justify-end mt-1.5">
           <button
-            onClick={() => (chrome as any).runtime.openOptionsPage()}
-            className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            onClick={() => chrome.runtime.openOptionsPage()}
+            className="text-[11px] text-slate-400 hover:text-indigo-500 transition-colors"
           >
-            ⚙ 设置
+            设置
           </button>
         </div>
       </div>
@@ -122,5 +243,5 @@ const App: React.FC = () => {
 };
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><App /></React.StrictMode>,
+  <React.StrictMode><App /></React.StrictMode>
 );

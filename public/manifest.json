@@ -1,27 +1,65 @@
 {
   "name": "Distill",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "将 AI 对话蒸馏为结构化知识点的浏览器插件",
   "manifest_version": 3,
+  "icons": {
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
   "permissions": [
     "storage",
     "activeTab",
     "scripting",
-    "downloads"
+    "downloads",
+    "notifications"
   ],
   "host_permissions": [
-    "https://gemini.google.com/*"
+    "https://gemini.google.com/*",
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://chat.deepseek.com/*",
+    "https://kimi.moonshot.cn/*",
+    "https://www.doubao.com/*",
+    "https://tongyi.aliyun.com/*",
+    "https://yiyan.baidu.com/*",
+    "https://xinghuo.xfyun.cn/*"
   ],
+  "commands": {
+    "extract-knowledge": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "提取当前 AI 对话知识点"
+    }
+  },
   "content_scripts": [
     {
-      "matches": ["https://gemini.google.com/*"],
-      "js": ["src/content/gemini.ts"]
+      "matches": [
+        "https://gemini.google.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://chat.deepseek.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://www.doubao.com/*",
+        "https://tongyi.aliyun.com/*",
+        "https://yiyan.baidu.com/*",
+        "https://xinghuo.xfyun.cn/*"
+      ],
+      "js": ["src/content/content.ts"]
     }
   ],
   "background": {
     "service_worker": "src/background/index.ts"
   },
   "action": {
+    "default_icon": {
+      "16": "icon-16.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    },
     "default_popup": "src/popup/index.html"
   },
   "options_page": "src/options/index.html"

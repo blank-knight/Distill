@@ -9,29 +9,38 @@ interface KnowledgeListProps {
   onDelete: (id: string) => void;
 }
 
-export const KnowledgeList: React.FC<KnowledgeListProps> = ({ points, isLoading, onUpdate, onDelete }) => {
+export const KnowledgeList: React.FC<KnowledgeListProps> = ({ 
+  points, 
+  isLoading, 
+  onUpdate, 
+  onDelete 
+}) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-10">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (points.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-center">
-        <div className="text-3xl mb-2">📚</div>
-        <p className="text-xs font-medium text-gray-500">暂无知识点</p>
-        <p className="text-xs text-gray-400 mt-1">在 Gemini 对话页面点击「提取知识点」</p>
+      <div className="text-center py-10 text-gray-500">
+        <p>还没有提取知识点</p>
+        <p className="text-sm mt-1">点击上方按钮从 Gemini 对话中提取</p>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-3">
       {points.map(point => (
-        <KnowledgeCard key={point.id} point={point} onUpdate={onUpdate} onDelete={onDelete} />
+        <KnowledgeCard
+          key={point.id}
+          point={point}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   );
