@@ -1,5 +1,6 @@
 import type { ConversationMessage, KnowledgePoint, LanguageOption, UserSettings } from '../types';
 import { MODEL_META } from '../types';
+import { t, resolveUILang } from '../i18n';
 
 const SYSTEM_PROMPT = `你是一个专业的知识提取助手，任务是从对话中提取结构化的知识点。
 
@@ -86,9 +87,10 @@ export async function extractKnowledge(
   _language: LanguageOption = 'auto'
 ): Promise<ExtractorResult> {
   const apiKey = getApiKey(settings);
+  const lang = resolveUILang(settings.uiLanguage);
 
   if (!apiKey) {
-    return { success: false, error: `请在设置页面配置 ${MODEL_META[settings.model].label} API Key` };
+    return { success: false, error: t('extNoKey', lang, { model: MODEL_META[settings.model].label }) };
   }
 
   const conversationText = conversation
@@ -114,7 +116,7 @@ export async function extractKnowledge(
       // 所有其他模型使用 OpenAI-compatible 接口
       const modelId = model === 'doubao' ? settings.doubaoModel : meta.defaultModel;
       if (model === 'doubao' && !modelId) {
-        return { success: false, error: '请在设置页面配置豆包 Model ID（Endpoint ID）' };
+        return { success: false, error: t('extDoubaoMissing', lang) };
       }
       responseText = await callOpenAICompatible(
         meta.baseUrl,
@@ -128,12 +130,12 @@ export async function extractKnowledge(
     }
 
     if (!responseText) {
-      return { success: false, error: 'API 返回内容为空，请检查模型配置或稍后重试' };
+      return { success: false, error: t('extEmpty', lang) };
     }
 
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return { success: false, error: 'API 返回格式错误，无法解析知识点' };
+      return { success: false, error: t('extParse', lang) };
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
@@ -151,13 +153,13 @@ export async function extractKnowledge(
     return { success: true, data: processedPoints };
 
   } catch (error) {
-    console.error('提取知识点失败:', error);
-    let msg = '提取知识点时发生错误';
+    console.error('Extraction failed:', error);
+    let msg = t('extError', lang);
     if (error instanceof Error) {
       if (error.message.includes('401') || error.message.toLowerCase().includes('unauthorized')) {
-        msg = `${MODEL_META[settings.model].label} API Key 无效或已过期`;
+        msg = t('extKeyInvalid', lang, { model: MODEL_META[settings.model].label });
       } else if (error.message.includes('429')) {
-        msg = 'API 请求频率过高，请稍后再试';
+        msg = t('extRateLimit', lang);
       } else {
         msg = error.message;
       }

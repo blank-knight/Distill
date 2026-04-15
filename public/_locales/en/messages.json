@@ -1,0 +1,8 @@
+{
+  "extDescription": {
+    "message": "Distill AI conversations into structured knowledge cards"
+  },
+  "cmdExtract": {
+    "message": "Extract knowledge from current AI conversation"
+  }
+}

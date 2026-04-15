@@ -1,0 +1,8 @@
+{
+  "extDescription": {
+    "message": "将 AI 对话蒸馏为结构化知识点"
+  },
+  "cmdExtract": {
+    "message": "提取当前 AI 对话知识点"
+  }
+}

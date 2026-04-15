@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import '../index.css';
 import type { KnowledgePoint } from '../types';
+import { DEFAULT_SETTINGS } from '../types';
 import { KnowledgeCard } from './components/KnowledgeCard';
 import { ExportPanel } from './components/ExportPanel';
+import { t, resolveUILang, type UILang } from '../i18n';
 
 declare const chrome: any;
 
@@ -21,8 +23,17 @@ const App: React.FC = () => {
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [lang, setLang] = useState<UILang>(() => resolveUILang(undefined));
   const extractingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 加载语言设置
+  useEffect(() => {
+    chrome.storage.sync.get('user_settings', (result: any) => {
+      const s = { ...DEFAULT_SETTINGS, ...(result.user_settings || {}) };
+      setLang(resolveUILang(s.uiLanguage));
+    });
+  }, []);
 
   useEffect(() => {
     chrome.storage.local.get([STORAGE_KEY, 'distill_extracting'], (result: any) => {
@@ -38,7 +49,7 @@ const App: React.FC = () => {
             if (extractingRef.current) {
               extractingRef.current = false;
               setExtracting(false);
-              setError('提取超时，请检查网络和 API Key 后重试');
+              setError(t('extractTimeout', lang));
               chrome.storage.local.set({ distill_extracting: 0 });
             }
           }, 120000 - elapsed);
@@ -53,6 +64,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const listener = (changes: any, area: string) => {
+      if (area === 'sync' && 'user_settings' in changes) {
+        const s = { ...DEFAULT_SETTINGS, ...(changes.user_settings.newValue || {}) };
+        setLang(resolveUILang(s.uiLanguage));
+        return;
+      }
       if (area !== 'local') return;
       if (STORAGE_KEY in changes) {
         setKnowledgePoints(changes[STORAGE_KEY].newValue || []);
@@ -64,16 +80,16 @@ const App: React.FC = () => {
         chrome.storage.local.set({ distill_extracting: 0 });
         const done = changes.distill_extract_done.newValue;
         if (done?.success) {
-          setSuccessMsg(`提取完成，新增 ${done.count} 个知识点`);
+          setSuccessMsg(t('extractDone', lang, { count: done.count }));
           setTimeout(() => setSuccessMsg(null), 3000);
         } else if (done && !done.success) {
-          setError(done.error || '提取失败');
+          setError(done.error || t('extractFail', lang));
         }
       }
     };
     chrome.storage.onChanged.addListener(listener);
     return () => chrome.storage.onChanged.removeListener(listener);
-  }, []);
+  }, [lang]);
 
   const extractKnowledge = () => {
     if (extractingRef.current) return; // 防止重复提取
@@ -87,7 +103,7 @@ const App: React.FC = () => {
       if (extractingRef.current) {
         extractingRef.current = false;
         setExtracting(false);
-        setError('提取超时，请检查网络和 API Key 后重试');
+        setError(t('extractTimeout', lang));
         chrome.storage.local.set({ distill_extracting: 0 });
       }
     }, 120000);
@@ -98,7 +114,7 @@ const App: React.FC = () => {
         setExtracting(false);
         if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
         chrome.storage.local.set({ distill_extracting: 0 });
-        setError('无法连接后台服务，请重新加载插件');
+        setError(t('extractNoConn', lang));
         return;
       }
       if (!res.success) {
@@ -106,14 +122,14 @@ const App: React.FC = () => {
         setExtracting(false);
         if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
         chrome.storage.local.set({ distill_extracting: 0 });
-        setError(res.error || '提取失败');
+        setError(res.error || t('extractFail', lang));
         return;
       }
     });
   };
 
   const clearAll = () => {
-    if (!confirm(`确定要删除全部 ${knowledgePoints.length} 个知识点吗？`)) return;
+    if (!confirm(t('clearConfirm', lang, { count: knowledgePoints.length }))) return;
     setKnowledgePoints([]);
     chrome.storage.local.remove(STORAGE_KEY);
   };
@@ -152,9 +168,9 @@ const App: React.FC = () => {
               <button
                 onClick={clearAll}
                 className="px-2 py-1 text-[11px] font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors"
-                title="清空所有知识点"
+                title={t('clear', lang)}
               >
-                清空
+                {t('clear', lang)}
               </button>
             )}
             <button
@@ -165,9 +181,9 @@ const App: React.FC = () => {
               {extracting ? (
                 <>
                   <span className="inline-block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                  提取中…
+                  {t('extracting', lang)}
                 </>
-              ) : '提取知识点'}
+              ) : t('extract', lang)}
             </button>
           </div>
         </div>
@@ -177,7 +193,7 @@ const App: React.FC = () => {
       {extracting && (
         <div className="mx-3 mt-2 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs rounded-lg shrink-0 flex items-center gap-2">
           <span className="inline-block w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0" />
-          正在后台提取，完成后会自动显示，可关闭此窗口
+          {t('extractBg', lang)}
         </div>
       )}
 
@@ -208,19 +224,19 @@ const App: React.FC = () => {
               <DropIcon className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-600">暂无知识点</p>
-              <p className="text-xs text-slate-400 mt-1">从 AI 对话中提取结构化知识</p>
+              <p className="text-sm font-semibold text-slate-600">{t('emptyTitle', lang)}</p>
+              <p className="text-xs text-slate-400 mt-1">{t('emptySubtitle', lang)}</p>
             </div>
             <div className="text-[10px] text-slate-400 space-y-0.5">
-              <p>ChatGPT / Gemini / Claude / DeepSeek</p>
-              <p>Kimi / 豆包 / 通义千问 / 文心一言 / 星火</p>
+              <p>{t('platforms1', lang)}</p>
+              <p>{t('platforms2', lang)}</p>
             </div>
-            <p className="text-[10px] text-indigo-400 font-medium">快捷键 Ctrl+Shift+E</p>
+            <p className="text-[10px] text-indigo-400 font-medium">{t('shortcut', lang)}</p>
           </div>
         ) : (
           <div className="space-y-2">
             {knowledgePoints.map(point => (
-              <KnowledgeCard key={point.id} point={point} onUpdate={handleUpdate} onDelete={handleDelete} />
+              <KnowledgeCard key={point.id} point={point} onUpdate={handleUpdate} onDelete={handleDelete} lang={lang} />
             ))}
           </div>
         )}
@@ -234,7 +250,7 @@ const App: React.FC = () => {
             onClick={() => chrome.runtime.openOptionsPage()}
             className="text-[11px] text-slate-400 hover:text-indigo-500 transition-colors"
           >
-            设置
+            {t('settings', lang)}
           </button>
         </div>
       </div>

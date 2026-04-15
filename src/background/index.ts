@@ -1,6 +1,7 @@
 import { extractKnowledge, getApiKey } from './extractor';
 import type { KnowledgePoint, UserSettings } from '../types';
 import { DEFAULT_SETTINGS, MODEL_META } from '../types';
+import { t, resolveUILang, type UILang } from '../i18n';
 
 declare const chrome: any;
 
@@ -45,7 +46,7 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
       handleSaveSettings(message.settings, sendResponse);
       return true;
     default:
-      sendResponse({ success: false, error: '未知操作' });
+      sendResponse({ success: false, error: 'Unknown action' });
       return false;
   }
 });
@@ -63,6 +64,11 @@ chrome.commands.onCommand.addListener((command: string) => {
 async function getSettings(): Promise<UserSettings> {
   const result = await chrome.storage.sync.get(STORAGE_KEYS.USER_SETTINGS);
   return { ...DEFAULT_SETTINGS, ...(result[STORAGE_KEYS.USER_SETTINGS] || {}) };
+}
+
+async function getLang(settings?: UserSettings): Promise<UILang> {
+  const s = settings || await getSettings();
+  return resolveUILang(s.uiLanguage);
 }
 
 async function getSupportedTab(): Promise<{ id: number; url: string } | null> {
@@ -107,32 +113,33 @@ function showNotification(title: string, message: string) {
  * 快捷键触发：纯后台执行，不需要 Popup 在场，完成后发通知。
  */
 async function triggerBackgroundExtraction() {
+  const settings = await getSettings();
+  const lang = resolveUILang(settings.uiLanguage);
   try {
     const tab = await getSupportedTab();
     if (!tab) {
-      showNotification('Distill', '请在支持的 AI 对话页面（ChatGPT、Gemini、Claude、DeepSeek 等）使用快捷键');
+      showNotification('Distill', t('notifUnsupported', lang));
       return;
     }
 
     const conversation = await fetchConversation(tab.id);
     if (conversation.length === 0) {
-      showNotification('Distill', '未检测到对话内容，请确认页面上有对话记录');
+      showNotification('Distill', t('notifNoConv', lang));
       return;
     }
 
-    const settings = await getSettings();
     if (!getApiKey(settings)) {
-      showNotification('Distill', `请先在设置页面配置 ${MODEL_META[settings.model].label} API Key`);
+      showNotification('Distill', t('notifNoKey', lang, { model: MODEL_META[settings.model].label }));
       return;
     }
 
-    showNotification('Distill', '正在后台提取知识点…');
+    showNotification('Distill', t('notifExtracting', lang));
     await chrome.storage.local.set({ distill_extracting: Date.now() });
 
     try {
       const result = await extractKnowledge(conversation, settings, tab.url);
       if (!result.success) {
-        showNotification('Distill 提取失败', result.error || '未知错误');
+        showNotification(t('errExtractFail', lang), result.error || t('errUnknownShort', lang));
         return;
       }
 
@@ -141,14 +148,14 @@ async function triggerBackgroundExtraction() {
       const merged = [...old, ...(result.data || [])];
       await chrome.storage.local.set({ [STORAGE_KEYS.KNOWLEDGE_POINTS]: merged });
 
-      showNotification('Distill 提取完成 ✓', `新增 ${result.data?.length} 个知识点，累计 ${merged.length} 个`);
+      showNotification('Distill ✓', t('notifDone', lang, { count: result.data?.length ?? 0, total: merged.length }));
     } finally {
       await chrome.storage.local.set({ distill_extracting: 0 });
     }
   } catch (err) {
-    console.error('后台提取失败:', err);
+    console.error('Background extraction failed:', err);
     await chrome.storage.local.set({ distill_extracting: 0 }).catch(() => {});
-    showNotification('Distill 提取失败', '发生未知错误');
+    showNotification(t('errExtractFail', lang), t('errUnknownShort', lang));
   }
 }
 
@@ -161,6 +168,9 @@ async function handleExtractKnowledge(sendResponse: (r: any) => void) {
     if (!responded) { responded = true; sendResponse(r); }
   };
 
+  const settings = await getSettings();
+  const lang = resolveUILang(settings.uiLanguage);
+
   try {
     const tab = await getSupportedTab();
     if (!tab) {
@@ -169,21 +179,20 @@ async function handleExtractKnowledge(sendResponse: (r: any) => void) {
       respond({
         success: false,
         error: url && !SUPPORTED_DOMAINS.some(d => url.includes(d))
-          ? '当前页面不支持提取，请在 ChatGPT、Gemini、Claude、DeepSeek、Kimi、豆包、通义千问等页面使用'
-          : '无法获取当前标签页',
+          ? t('errUnsupported', lang)
+          : t('errNoTab', lang),
       });
       return;
     }
 
     const conversation = await fetchConversation(tab.id);
     if (conversation.length === 0) {
-      respond({ success: false, error: '未检测到对话内容，请确认页面上有对话记录' });
+      respond({ success: false, error: t('errNoConv', lang) });
       return;
     }
 
-    const settings = await getSettings();
     if (!getApiKey(settings)) {
-      respond({ success: false, error: `请在设置页面配置 ${MODEL_META[settings.model].label} API Key` });
+      respond({ success: false, error: t('errNoKey', lang, { model: MODEL_META[settings.model].label }) });
       return;
     }
 
@@ -195,7 +204,7 @@ async function handleExtractKnowledge(sendResponse: (r: any) => void) {
       const result = await extractKnowledge(conversation, settings, tab.url);
       if (!result.success) {
         await chrome.storage.local.set({ distill_extract_done: { success: false, error: result.error } });
-        showNotification('Distill 提取失败', result.error || '未知错误');
+        showNotification(t('errExtractFail', lang), result.error || t('errUnknownShort', lang));
         return;
       }
 
@@ -205,15 +214,18 @@ async function handleExtractKnowledge(sendResponse: (r: any) => void) {
       await chrome.storage.local.set({ [STORAGE_KEYS.KNOWLEDGE_POINTS]: merged });
       await chrome.storage.local.set({ distill_extract_done: { success: true, count: result.data?.length || 0 } });
 
-      showNotification('Distill 提取完成 ✓', `新增 ${result.data?.length} 个知识点，累计 ${merged.length} 个`);
+      showNotification('Distill ✓', t('notifDone', lang, { count: result.data?.length ?? 0, total: merged.length }));
     } finally {
       await chrome.storage.local.set({ distill_extracting: 0 });
     }
   } catch (err) {
-    console.error('提取知识失败:', err);
-    await chrome.storage.local.set({ distill_extracting: 0, distill_extract_done: { success: false, error: '后台发生错误' } }).catch(() => {});
-    respond({ success: false, error: '后台发生错误，请重试' });
-    showNotification('Distill 提取失败', '发生未知错误');
+    console.error('Extraction failed:', err);
+    await chrome.storage.local.set({
+      distill_extracting: 0,
+      distill_extract_done: { success: false, error: t('errBackendShort', lang) },
+    }).catch(() => {});
+    respond({ success: false, error: t('errBackend', lang) });
+    showNotification(t('errExtractFail', lang), t('errUnknownShort', lang));
   }
 }
 
@@ -222,7 +234,8 @@ async function handleGetKnowledgePoints(sendResponse: (r: any) => void) {
     const result = await chrome.storage.local.get(STORAGE_KEYS.KNOWLEDGE_POINTS);
     sendResponse({ success: true, data: result[STORAGE_KEYS.KNOWLEDGE_POINTS] || [] });
   } catch {
-    sendResponse({ success: false, error: '获取知识点时发生错误' });
+    const lang = await getLang();
+    sendResponse({ success: false, error: t('storageGetError', lang) });
   }
 }
 
@@ -231,7 +244,8 @@ async function handleSaveKnowledgePoints(points: KnowledgePoint[], sendResponse:
     await chrome.storage.local.set({ [STORAGE_KEYS.KNOWLEDGE_POINTS]: points });
     sendResponse({ success: true });
   } catch {
-    sendResponse({ success: false, error: '保存知识点时发生错误' });
+    const lang = await getLang();
+    sendResponse({ success: false, error: t('storageSaveError', lang) });
   }
 }
 
@@ -240,7 +254,8 @@ async function handleClearKnowledgePoints(sendResponse: (r: any) => void) {
     await chrome.storage.local.remove(STORAGE_KEYS.KNOWLEDGE_POINTS);
     sendResponse({ success: true });
   } catch {
-    sendResponse({ success: false, error: '清除知识点时发生错误' });
+    const lang = await getLang();
+    sendResponse({ success: false, error: t('storageClearError', lang) });
   }
 }
 
@@ -249,7 +264,7 @@ async function handleGetSettings(sendResponse: (r: any) => void) {
     const settings = await getSettings();
     sendResponse({ success: true, data: settings });
   } catch {
-    sendResponse({ success: false, error: '获取设置时发生错误' });
+    sendResponse({ success: false, error: t('settingsGetError', resolveUILang(undefined)) });
   }
 }
 
@@ -258,6 +273,7 @@ async function handleSaveSettings(settings: UserSettings, sendResponse: (r: any)
     await chrome.storage.sync.set({ [STORAGE_KEYS.USER_SETTINGS]: settings });
     sendResponse({ success: true });
   } catch {
-    sendResponse({ success: false, error: '保存设置时发生错误' });
+    const lang = resolveUILang(settings?.uiLanguage);
+    sendResponse({ success: false, error: t('settingsSaveError', lang) });
   }
 }

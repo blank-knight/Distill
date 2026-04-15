@@ -101,7 +101,8 @@ export interface UserSettings {
   glmApiKey: string;
   // 其他设置
   defaultExportFormat: ExportFormat;
-  defaultLanguage: LanguageOption;
+  defaultLanguage: LanguageOption;  // 提取输出语言
+  uiLanguage: LanguageOption;       // 界面语言（auto 跟随系统）
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -116,4 +117,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   glmApiKey: '',
   defaultExportFormat: 'anki',
   defaultLanguage: 'auto',
+  uiLanguage: 'auto',
 };

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import '../index.css';
 import type { UserSettings, ModelType, ExportFormat, LanguageOption } from '../types';
 import { MODEL_META, DEFAULT_SETTINGS } from '../types';
+import { t, resolveUILang, type UILang } from '../i18n';
 
 declare const chrome: any;
 
@@ -14,6 +15,9 @@ const App: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saved, setSaved] = useState(false);
+
+  // 根据当前设置解析界面语言（实时随 settings.uiLanguage 变化）
+  const lang: UILang = resolveUILang(settings.uiLanguage);
 
   useEffect(() => {
     chrome.storage.sync.get('user_settings', (result: any) => {
@@ -39,11 +43,11 @@ const App: React.FC = () => {
     const apiKey = settings[keyField] as string;
 
     if (!apiKey) {
-      setTestResult({ success: false, message: `请先输入 ${meta.label} API Key` });
+      setTestResult({ success: false, message: t('optKeyRequired', lang, { model: meta.label }) });
       return;
     }
     if (model === 'doubao' && !settings.doubaoModel) {
-      setTestResult({ success: false, message: '请先输入豆包 Model ID' });
+      setTestResult({ success: false, message: t('optDoubaoRequired', lang) });
       return;
     }
 
@@ -60,9 +64,9 @@ const App: React.FC = () => {
           messages: [{ role: 'user', content: 'Hi' }],
         });
         if (res.content.length > 0) {
-          setTestResult({ success: true, message: `${meta.label} API Key 有效 ✓` });
+          setTestResult({ success: true, message: t('optKeyValid', lang, { model: meta.label }) });
         } else {
-          setTestResult({ success: false, message: `${meta.label} API Key 无效` });
+          setTestResult({ success: false, message: t('optKeyInvalid', lang, { model: meta.label }) });
         }
       } else {
         const modelId = model === 'doubao' ? settings.doubaoModel : meta.defaultModel;
@@ -83,14 +87,17 @@ const App: React.FC = () => {
           throw new Error(data.error?.message || `HTTP ${res.status}`);
         }
         if (data.choices?.length > 0) {
-          setTestResult({ success: true, message: `${meta.label} API Key 有效 ✓` });
+          setTestResult({ success: true, message: t('optKeyValid', lang, { model: meta.label }) });
         } else {
-          setTestResult({ success: false, message: `${meta.label} API Key 无效` });
+          setTestResult({ success: false, message: t('optKeyInvalid', lang, { model: meta.label }) });
         }
       }
     } catch (err: any) {
-      const msg = err?.message || '测试失败';
-      setTestResult({ success: false, message: msg.includes('401') ? `${meta.label} API Key 无效或已过期` : msg });
+      const msg = err?.message || t('optTestFail', lang);
+      setTestResult({
+        success: false,
+        message: msg.includes('401') ? t('optKeyExpired', lang, { model: meta.label }) : msg,
+      });
     } finally {
       setIsTesting(false);
     }
@@ -102,14 +109,28 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-sm mt-8 mb-8">
-      <h1 className="text-xl font-bold text-gray-800 mb-1">Distill — 设置</h1>
-      <p className="text-xs text-gray-400 mb-6">快捷键：Ctrl+Shift+E（Mac: ⌘+Shift+E）在 Gemini 页面后台提取</p>
+      <h1 className="text-xl font-bold text-gray-800 mb-1">{t('optTitle', lang)}</h1>
+      <p className="text-xs text-gray-400 mb-6">{t('optShortcut', lang)}</p>
 
       <div className="space-y-6">
 
+        {/* 界面语言（置顶，方便切换） */}
+        <section>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">{t('optUiLang', lang)}</label>
+          <select
+            value={settings.uiLanguage}
+            onChange={e => set({ uiLanguage: e.target.value as LanguageOption })}
+            className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="auto">{t('optAuto', lang)}</option>
+            <option value="zh">{t('optChinese', lang)}</option>
+            <option value="en">{t('optEnglish', lang)}</option>
+          </select>
+        </section>
+
         {/* 模型选择 */}
         <section>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">当前使用模型</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">{t('optModel', lang)}</label>
           <div className="grid grid-cols-2 gap-2">
             {MODEL_ORDER.map(m => (
               <button
@@ -129,7 +150,7 @@ const App: React.FC = () => {
 
         {/* API Keys */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">API Key 配置</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">{t('optApiKeys', lang)}</h2>
           <div className="space-y-3">
             {MODEL_ORDER.map(m => {
               const meta = MODEL_META[m];
@@ -139,7 +160,7 @@ const App: React.FC = () => {
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-medium text-gray-600">{meta.label}</span>
                     <a href={meta.docUrl} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-blue-500 hover:underline">获取 Key →</a>
+                      className="text-xs text-blue-500 hover:underline">{t('optGetKey', lang)}</a>
                   </div>
                   <input
                     type="password"
@@ -153,7 +174,7 @@ const App: React.FC = () => {
                       type="text"
                       value={settings.doubaoModel}
                       onChange={e => set({ doubaoModel: e.target.value })}
-                      placeholder="Model ID / Endpoint ID（必填）"
+                      placeholder={t('optDoubaoPlaceholder', lang)}
                       className="w-full mt-1.5 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                   )}
@@ -170,7 +191,7 @@ const App: React.FC = () => {
             disabled={isTesting}
             className="w-full py-2 text-sm font-medium border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 transition-colors"
           >
-            {isTesting ? '测试中…' : `测试 ${currentMeta.label} API Key`}
+            {isTesting ? t('optTesting', lang) : t('optTest', lang, { model: currentMeta.label })}
           </button>
           {testResult && (
             <div className={`mt-2 px-3 py-2 rounded-lg text-sm ${testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
@@ -182,19 +203,19 @@ const App: React.FC = () => {
         {/* 其他设置 */}
         <section className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">默认语言</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('optExtractLang', lang)}</label>
             <select
               value={settings.defaultLanguage}
               onChange={e => set({ defaultLanguage: e.target.value as LanguageOption })}
               className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              <option value="auto">跟随对话</option>
-              <option value="zh">中文</option>
-              <option value="en">English</option>
+              <option value="auto">{t('optFollowConv', lang)}</option>
+              <option value="zh">{t('optChinese', lang)}</option>
+              <option value="en">{t('optEnglish', lang)}</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">默认导出格式</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('optExportFormat', lang)}</label>
             <select
               value={settings.defaultExportFormat}
               onChange={e => set({ defaultExportFormat: e.target.value as ExportFormat })}
@@ -215,7 +236,7 @@ const App: React.FC = () => {
             saved ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
           }`}
         >
-          {saved ? '已保存 ✓' : isSaving ? '保存中…' : '保存设置'}
+          {saved ? t('optSaved', lang) : isSaving ? t('optSaving', lang) : t('optSave', lang)}
         </button>
       </div>
     </div>

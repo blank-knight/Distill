@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import type { KnowledgePoint } from '../../types';
+import { t, type UILang } from '../../i18n';
 
 interface KnowledgeCardProps {
   point: KnowledgePoint;
   onUpdate: (point: KnowledgePoint) => void;
   onDelete: (id: string) => void;
+  lang: UILang;
 }
 
 const ChevronIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -25,7 +27,7 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, onDelete }) => {
+export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, onDelete, lang }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedPoint, setEditedPoint] = useState<KnowledgePoint>(point);
@@ -42,7 +44,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, o
 
   const handleDelete = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (confirm('确定要删除这个知识点吗？')) {
+    if (confirm(t('deleteConfirm', lang))) {
       onDelete(point.id);
     }
   };
@@ -58,19 +60,19 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, o
     return (
       <div className="bg-white rounded-xl border-2 border-indigo-200 p-3 space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-indigo-600">编辑知识点</span>
+          <span className="text-xs font-semibold text-indigo-600">{t('editKP', lang)}</span>
           <div className="flex gap-1.5">
             <button onClick={handleCancel} className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-100 rounded-md transition-colors">
-              取消
+              {t('cancel', lang)}
             </button>
             <button onClick={handleSave} className="px-2.5 py-1 text-[11px] font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-md transition-colors">
-              保存
+              {t('save', lang)}
             </button>
           </div>
         </div>
         <div className="space-y-2">
           <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">问题</label>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('question', lang)}</label>
             <input
               type="text"
               value={editedPoint.question}
@@ -79,7 +81,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, o
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">答案</label>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('answer', lang)}</label>
             <textarea
               value={editedPoint.answer}
               onChange={e => setEditedPoint({ ...editedPoint, answer: e.target.value })}
@@ -88,7 +90,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, o
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">延伸</label>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('ext', lang)}</label>
             <textarea
               value={editedPoint.extension}
               onChange={e => setEditedPoint({ ...editedPoint, extension: e.target.value })}
@@ -97,7 +99,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, o
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">标签（空格分隔）</label>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('tagsLabel', lang)}</label>
             <input
               type="text"
               value={editedPoint.tags.join(' ')}
@@ -133,14 +135,14 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, o
           <button
             onClick={handleEdit}
             className="p-1 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-md transition-colors"
-            title="编辑"
+            title={t('edit', lang)}
           >
             <PencilIcon className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleDelete}
             className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-            title="删除"
+            title={t('delete', lang)}
           >
             <TrashIcon className="w-3.5 h-3.5" />
           </button>
@@ -150,12 +152,12 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ point, onUpdate, o
       {isExpanded && (
         <div className="px-3 pb-3 pt-2 border-t border-slate-100 space-y-2">
           <div>
-            <p className="text-[10px] font-semibold text-slate-400 mb-0.5">答案</p>
+            <p className="text-[10px] font-semibold text-slate-400 mb-0.5">{t('answer', lang)}</p>
             <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{point.answer}</p>
           </div>
           {point.extension && (
             <div>
-              <p className="text-[10px] font-semibold text-slate-400 mb-0.5">延伸</p>
+              <p className="text-[10px] font-semibold text-slate-400 mb-0.5">{t('ext', lang)}</p>
               <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{point.extension}</p>
             </div>
           )}
