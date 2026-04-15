@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distill — Privacy Policy / 隐私政策</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --fg: #1f2937;
+      --muted: #6b7280;
+      --accent: #6366f1;
+      --accent-soft: #eef2ff;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                   "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.7;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px 96px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .logo {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo svg { width: 24px; height: 24px; fill: white; }
+    h1 { margin: 0; font-size: 28px; }
+    .updated { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    h2 {
+      margin-top: 48px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--accent-soft);
+      font-size: 22px;
+    }
+    h3 { margin-top: 32px; font-size: 17px; }
+    p, li { color: #374151; }
+    ul { padding-left: 22px; }
+    li { margin-bottom: 6px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: #db2777;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+    .lang-toggle {
+      position: sticky;
+      top: 16px;
+      float: right;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px;
+      display: inline-flex;
+      gap: 2px;
+      font-size: 13px;
+    }
+    .lang-toggle button {
+      border: 0;
+      background: transparent;
+      padding: 4px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .lang-toggle button.active {
+      background: var(--accent);
+      color: white;
+    }
+    section[hidden] { display: none; }
+    .callout {
+      background: var(--accent-soft);
+      border-left: 3px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 128 128">
+          <path d="M64 24C53 39 38 58 38 78C38 92.36 49.64 104 64 104C78.36 104 90 92.36 90 78C90 58 75 39 64 24Z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Distill</h1>
+        <div class="updated">Privacy Policy · Last updated: 2026-04-15</div>
+      </div>
+    </div>
+
+    <div class="lang-toggle">
+      <button id="btn-en" class="active" onclick="toggle('en')">English</button>
+      <button id="btn-zh" onclick="toggle('zh')">中文</button>
+    </div>
+
+    <section id="en">
+      <h2>Summary</h2>
+      <p>Distill is a browser extension that extracts structured knowledge points from AI chat conversations.</p>
+      <div class="callout">
+        <strong>Distill has no backend server of its own, does not collect telemetry, does not use analytics, and does not sell or share any user data.</strong>
+      </div>
+
+      <h2>What data Distill handles</h2>
+
+      <h3>1. API keys you configure</h3>
+      <p>(Claude / OpenAI / DeepSeek / Qwen / Moonshot / Doubao / GLM)</p>
+      <ul>
+        <li>Stored <strong>only</strong> via <code>chrome.storage.sync</code> (encrypted at rest by your browser, synced across your own signed-in Chrome profile)</li>
+        <li>Never transmitted anywhere except to the corresponding AI provider's official API endpoint when you trigger an extraction</li>
+      </ul>
+
+      <h3>2. Conversation content on supported AI chat pages</h3>
+      <p>(ChatGPT, Gemini, Claude, DeepSeek, Kimi, Doubao, Qwen, Wenxin, Spark)</p>
+      <ul>
+        <li>Read <strong>only</strong> when you explicitly trigger an extraction (toolbar button or <code>Ctrl+Shift+E</code>)</li>
+        <li>Sent <strong>directly</strong> from your browser to the AI provider you selected (no intermediary server)</li>
+      </ul>
+
+      <h3>3. Extracted knowledge points and source URL</h3>
+      <ul>
+        <li>Stored <strong>locally</strong> via <code>chrome.storage.local</code> on your device</li>
+        <li>Never transmitted anywhere; fully under your control (edit, delete, or clear at any time)</li>
+      </ul>
+
+      <h2>What Distill does NOT do</h2>
+      <ul>
+        <li>Does not run a backend, database, or proxy server of its own</li>
+        <li>Does not collect analytics, telemetry, crash reports, or usage statistics</li>
+        <li>Does not read any page other than the supported AI chat pages, and only when you explicitly trigger extraction</li>
+        <li>Does not share, sell, or disclose your data to third parties</li>
+        <li>Does not use cookies or tracking pixels</li>
+      </ul>
+
+      <h2>Third-party AI providers</h2>
+      <p>When you trigger extraction, your API key and the conversation text are sent directly from your browser to the AI provider <strong>you chose</strong> in settings. That request is governed by the provider's own privacy policy:</p>
+      <ul>
+        <li><a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic (Claude)</a></li>
+        <li><a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">OpenAI</a></li>
+        <li><a href="https://platform.deepseek.com" target="_blank" rel="noopener">DeepSeek</a></li>
+        <li><a href="https://dashscope.console.aliyun.com" target="_blank" rel="noopener">Alibaba Qwen / Tongyi</a></li>
+        <li><a href="https://platform.moonshot.cn" target="_blank" rel="noopener">Moonshot (Kimi)</a></li>
+        <li><a href="https://www.volcengine.com/" target="_blank" rel="noopener">ByteDance Doubao (Volcengine)</a></li>
+        <li><a href="https://open.bigmodel.cn" target="_blank" rel="noopener">Zhipu GLM</a></li>
+      </ul>
+      <p>You are responsible for choosing a provider you trust.</p>
+
+      <h2>Permissions requested</h2>
+      <table>
+        <tr><th>Permission</th><th>Purpose</th></tr>
+        <tr><td><code>storage</code></td><td>Save your settings, API keys, and extracted knowledge points locally</td></tr>
+        <tr><td><code>activeTab</code></td><td>Read conversation content from the current AI chat tab when you click Extract</td></tr>
+        <tr><td><code>scripting</code></td><td>Inject the content script into supported AI chat pages when needed</td></tr>
+        <tr><td><code>downloads</code></td><td>Let you export knowledge points as Anki / Obsidian / Notion files</td></tr>
+        <tr><td><code>notifications</code></td><td>Show completion / error notifications after background extraction</td></tr>
+        <tr><td><code>host_permissions</code></td><td>Listed AI chat domains only — required to read conversation DOM</td></tr>
+      </table>
+
+      <h2>Data deletion</h2>
+      <ul>
+        <li>Click <strong>Clear</strong> in the popup to delete all stored knowledge points</li>
+        <li>Uninstall the extension to remove all locally stored data</li>
+        <li>Remove API keys via the Settings page at any time</li>
+      </ul>
+
+      <h2>Contact</h2>
+      <p>Issues & source code: <a href="https://github.com/blank-knight/Distill" target="_blank" rel="noopener">github.com/blank-knight/Distill</a></p>
+    </section>
+
+    <section id="zh" hidden>
+      <h2>概述</h2>
+      <p>Distill 是一款浏览器扩展，用于从 AI 对话页面提取结构化知识点。</p>
+      <div class="callout">
+        <strong>Distill 没有自己的服务器后端，不收集遥测数据，不使用分析工具，也不会出售或分享任何用户数据。</strong>
+      </div>
+
+      <h2>Distill 处理的数据</h2>
+
+      <h3>1. 您配置的 API Key</h3>
+      <p>（Claude / OpenAI / DeepSeek / 通义千问 / 月之暗面 / 豆包 / 智谱 GLM）</p>
+      <ul>
+        <li><strong>仅</strong>通过 <code>chrome.storage.sync</code> 保存（由浏览器本地加密，并在您登录的 Chrome 账号间同步）</li>
+        <li>除提取时发送给对应的官方 API 以外，不会传输到任何其他地方</li>
+      </ul>
+
+      <h3>2. 支持的 AI 对话页面上的对话内容</h3>
+      <p>（ChatGPT、Gemini、Claude、DeepSeek、Kimi、豆包、通义千问、文心一言、星火）</p>
+      <ul>
+        <li><strong>仅</strong>在您主动触发提取（点击工具栏按钮或 <code>Ctrl+Shift+E</code>）时读取</li>
+        <li>从您的浏览器<strong>直接</strong>发送到您选择的 AI 服务商，不经过任何中间服务器</li>
+      </ul>
+
+      <h3>3. 提取出的知识点和来源 URL</h3>
+      <ul>
+        <li><strong>本地</strong>保存在 <code>chrome.storage.local</code></li>
+        <li>不会传输到任何地方；您可随时编辑、删除或清空</li>
+      </ul>
+
+      <h2>Distill 不会做的事</h2>
+      <ul>
+        <li>不运行任何服务器、数据库或代理</li>
+        <li>不收集分析数据、遥测、崩溃报告或使用统计</li>
+        <li>除在您主动触发提取时，不会读取任何支持页面以外的内容</li>
+        <li>不与任何第三方分享、出售或披露您的数据</li>
+        <li>不使用 Cookie 或追踪像素</li>
+      </ul>
+
+      <h2>第三方 AI 服务商</h2>
+      <p>触发提取时，您的 API Key 和对话文本会从您的浏览器<strong>直接</strong>发送到您在设置中选择的 AI 服务商，该请求受对应服务商的隐私政策约束：</p>
+      <ul>
+        <li><a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic (Claude)</a></li>
+        <li><a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">OpenAI</a></li>
+        <li><a href="https://platform.deepseek.com" target="_blank" rel="noopener">DeepSeek</a></li>
+        <li><a href="https://dashscope.console.aliyun.com" target="_blank" rel="noopener">阿里通义千问</a></li>
+        <li><a href="https://platform.moonshot.cn" target="_blank" rel="noopener">Moonshot (Kimi)</a></li>
+        <li><a href="https://www.volcengine.com/" target="_blank" rel="noopener">字节豆包（火山引擎）</a></li>
+        <li><a href="https://open.bigmodel.cn" target="_blank" rel="noopener">智谱 GLM</a></li>
+      </ul>
+      <p>选择值得信赖的服务商由您自行决定。</p>
+
+      <h2>申请的权限</h2>
+      <table>
+        <tr><th>权限</th><th>用途</th></tr>
+        <tr><td><code>storage</code></td><td>本地保存设置、API Key 和提取的知识点</td></tr>
+        <tr><td><code>activeTab</code></td><td>在您点击"提取"时读取当前 AI 对话标签页的内容</td></tr>
+        <tr><td><code>scripting</code></td><td>按需在支持的 AI 对话页注入 content script</td></tr>
+        <tr><td><code>downloads</code></td><td>导出知识点为 Anki / Obsidian / Notion 文件</td></tr>
+        <tr><td><code>notifications</code></td><td>后台提取完成/失败时显示系统通知</td></tr>
+        <tr><td><code>host_permissions</code></td><td>仅限列出的 AI 对话域名——用于读取对话 DOM</td></tr>
+      </table>
+
+      <h2>数据删除</h2>
+      <ul>
+        <li>在弹窗中点击<strong>清空</strong>即可删除全部知识点</li>
+        <li>卸载扩展即清除全部本地数据</li>
+        <li>随时可在设置页删除 API Key</li>
+      </ul>
+
+      <h2>联系方式</h2>
+      <p>问题反馈 / 源码：<a href="https://github.com/blank-knight/Distill" target="_blank" rel="noopener">github.com/blank-knight/Distill</a></p>
+    </section>
+  </div>
+
+  <script>
+    function toggle(lang) {
+      document.getElementById('en').hidden = (lang !== 'en');
+      document.getElementById('zh').hidden = (lang !== 'zh');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+      document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+      try { localStorage.setItem('distill-privacy-lang', lang); } catch (e) {}
+    }
+    // 根据浏览器语言或用户上次选择自动切换
+    (function init() {
+      let lang = 'en';
+      try { lang = localStorage.getItem('distill-privacy-lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en'); } catch (e) {}
+      toggle(lang);
+    })();
+  </script>
+</body>
+</html>

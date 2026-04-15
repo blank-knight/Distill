@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 test-glm-api.js
+
+# Chrome Web Store 打包产物
+*.zip
