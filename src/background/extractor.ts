@@ -2,30 +2,39 @@ import type { ConversationMessage, KnowledgePoint, LanguageOption, UserSettings 
 import { MODEL_META } from '../types';
 import { t, resolveUILang } from '../i18n';
 
-const SYSTEM_PROMPT = `你是一个专业的知识提取助手，任务是从对话中提取结构化的知识点。
+/** 根据语言设置生成 system prompt */
+function buildSystemPrompt(language: LanguageOption): string {
+  // auto = 跟随对话语言，zh/en = 强制输出对应语言
+  const langInstruction =
+    language === 'zh' ? '\n\nIMPORTANT: All output (question, answer, extension, tags) MUST be in Chinese (中文), regardless of the conversation language.'
+    : language === 'en' ? '\n\nIMPORTANT: All output (question, answer, extension, tags) MUST be in English, regardless of the conversation language.'
+    : '\n\nIMPORTANT: Output in the SAME language as the conversation. If the conversation is in English, output in English. If in Chinese, output in Chinese.';
 
-请严格按照以下要求执行：
-1. 分析对话内容，识别出其中的关键知识点
-2. 每个知识点必须包含：
-   - question: 知识点的问题描述
-   - answer: 知识点的核心答案
-   - extension: 相关延伸内容（如相关概念、推荐阅读等）
-   - tags: 相关标签（3-5个）
-3. 输出必须是严格的 JSON 格式，包含一个名为 "knowledge_points" 的数组
-4. 不要输出任何额外的文字或解释
-5. 确保提取的知识点准确、清晰、有价值
+  return `You are a professional knowledge extraction assistant. Your task is to extract structured knowledge points from conversations.
 
-示例输出格式：
+Follow these rules strictly:
+1. Analyze the conversation and identify key knowledge points
+2. Each knowledge point must include:
+   - question: A clear question describing the knowledge point
+   - answer: The core answer
+   - extension: Related extensions (related concepts, recommended reading, etc.)
+   - tags: Related tags (3-5)
+3. Output must be strict JSON format with an array named "knowledge_points"
+4. Do not output any extra text or explanation
+5. Ensure extracted knowledge points are accurate, clear, and valuable${langInstruction}
+
+Example output format:
 {
   "knowledge_points": [
     {
-      "question": "什么是 RAG（检索增强生成）？",
-      "answer": "RAG 是一种将外部知识库检索与语言模型生成结合的架构，用于减少幻觉、提升答案准确性。",
-      "extension": "相关概念：向量数据库、Embedding、Fine-tuning vs RAG 的区别。推荐阅读：LangChain 文档中的 RAG 章节。",
-      "tags": ["AI", "RAG", "NLP", "知识库"]
+      "question": "What is RAG (Retrieval-Augmented Generation)?",
+      "answer": "RAG is an architecture that combines external knowledge retrieval with language model generation to reduce hallucinations and improve answer accuracy.",
+      "extension": "Related concepts: vector databases, embeddings, fine-tuning vs RAG. Recommended: LangChain RAG documentation.",
+      "tags": ["AI", "RAG", "NLP", "Knowledge Base"]
     }
   ]
 }`;
+}
 
 export interface ExtractorResult {
   success: boolean;
@@ -84,7 +93,6 @@ export async function extractKnowledge(
   conversation: ConversationMessage[],
   settings: UserSettings,
   sourceUrl: string,
-  _language: LanguageOption = 'auto'
 ): Promise<ExtractorResult> {
   const apiKey = getApiKey(settings);
   const lang = resolveUILang(settings.uiLanguage);
@@ -92,6 +100,8 @@ export async function extractKnowledge(
   if (!apiKey) {
     return { success: false, error: t('extNoKey', lang, { model: MODEL_META[settings.model].label }) };
   }
+
+  const systemPrompt = buildSystemPrompt(settings.defaultLanguage);
 
   const conversationText = conversation
     .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
@@ -108,7 +118,7 @@ export async function extractKnowledge(
       const response = await anthropic.messages.create({
         model: meta.defaultModel,
         max_tokens: 4096,
-        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: conversationText }],
       });
       responseText = (response.content[0] as any)?.text || '';
@@ -123,7 +133,7 @@ export async function extractKnowledge(
         modelId,
         apiKey,
         [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: conversationText },
         ]
       );
