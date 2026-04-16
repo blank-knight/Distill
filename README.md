@@ -1,6 +1,8 @@
 # Distill
 
-> 将 AI 对话蒸馏为结构化知识点的浏览器插件
+> Distill AI conversations into structured knowledge cards / 将 AI 对话蒸馏为结构化知识点
+
+Distill is a Chrome extension that extracts your AI conversations and uses LLMs to organize them into structured knowledge cards, with export support for Anki, Obsidian, and Notion.
 
 Distill 是一个 Chrome 浏览器扩展，能够自动提取你与 AI 的对话内容，借助大语言模型将其整理为结构化的知识卡片，并支持导出到 Anki、Obsidian、Notion 等主流知识管理工具。
 
@@ -31,28 +33,20 @@ Distill 是一个 Chrome 浏览器扩展，能够自动提取你与 AI 的对话
 | 文心一言 | yiyan.baidu.com |
 | 星火 | xinghuo.xfyun.cn |
 
-## 界面预览
+## Screenshots / 界面预览
 
-```
-┌──────────────────────────────────┐
-│ 💧 Distill  [3]      [提取知识点] │  ← 渐变头部 + 知识点计数
-├──────────────────────────────────┤
-│ ▸ 期现套利为何会亏损？            │
-│   [期货] [套利] [资金费率]        │  ← 可展开的知识卡片
-│                                  │
-│ ▾ RAG 和 Fine-tuning 有什么区别？ │
-│   ┌ 答案 ─────────────────────┐  │
-│   │ RAG 通过检索外部知识库增强  │  │
-│   │ 生成，Fine-tuning 则...    │  │
-│   ├ 延伸 ─────────────────────┤  │
-│   │ 推荐阅读：LangChain 文档   │  │
-│   └───────────────────────────┘  │
-│   [AI] [RAG] [NLP] [知识库]      │
-├──────────────────────────────────┤
-│  [Anki]  [Obsidian]  [Notion]    │  ← 导出
-│                           设置   │
-└──────────────────────────────────┘
-```
+<table>
+  <tr>
+    <td align="center"><img src="docs/popup-empty.png" width="280" /><br/><b>Empty State</b></td>
+    <td align="center"><img src="docs/pop-extact.png" width="280" /><br/><b>Extracted Cards</b></td>
+    <td align="center"><img src="docs/settings.png" width="280" /><br/><b>Settings</b></td>
+  </tr>
+</table>
+
+<details>
+<summary><b>Anki Export Preview / Anki 导出预览</b></summary>
+<img src="docs/anki.png" width="800" />
+</details>
 
 ## 安装与构建
 
